@@ -1,0 +1,336 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
+
+interface BookManager {
+    void addBook(Book book);
+
+    void editBook(int bookId, Book newBook);
+
+    void removeBook(int bookId);
+}
+
+
+interface BookSearch {
+    List<Book> searchBooks(String keyword);
+}
+
+
+interface BookLending {
+    void lendBook(int bookId, String borrower);
+
+    void returnBook(int bookId);
+}
+
+
+class Book {
+    private static int idCounter = 1;
+
+    private int bookId;
+    private String title;
+    private Author author;
+    private Genre genre;
+    private boolean available;
+
+    public Book(String title, Author author, Genre genre) {
+        this.bookId = idCounter++;
+        this.title = title;
+        this.author = author;
+        this.genre = genre;
+        this.available = true;
+    }
+
+
+    public int getBookId() {
+        return bookId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public Author getAuthor() {
+        return author;
+    }
+
+    public Genre getGenre() {
+        return genre;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
+
+
+    public void setAvailable(boolean available) {
+        this.available = available;
+    }
+
+    @Override
+    public String toString() {
+        return "Book{" +
+                "bookId=" + bookId +
+                ", title='" + title + '\'' +
+                ", author=" + author +
+                ", genre=" + genre +
+                ", available=" + available +
+                '}';
+    }
+}
+
+
+class Author {
+    private String authorName;
+
+    public Author(String authorName) {
+        this.authorName = authorName;
+    }
+
+    @Override
+    public String toString() {
+        return authorName;
+    }
+}
+
+
+enum Genre {
+    FICTION, NON_FICTION, MYSTERY, SCIENCE_FICTION, FANTASY, ROMANCE, HORROR
+}
+
+
+class Library implements BookManager, BookSearch, BookLending {
+    private Map<Integer, Book> books;
+    private Map<Integer, String> borrowingHistory;
+
+    public Library() {
+        this.books = new HashMap<>();
+        this.borrowingHistory = new HashMap<>();
+    }
+
+
+    @Override
+    public void addBook(Book book) {
+        books.put(book.getBookId(), book);
+    }
+
+    @Override
+    public void editBook(int bookId, Book newBook) {
+        if (books.containsKey(bookId)) {
+            books.put(bookId, newBook);
+        }
+    }
+
+    @Override
+    public void removeBook(int bookId) {
+        books.remove(bookId);
+    }
+
+
+    @Override
+    public List<Book> searchBooks(String keyword) {
+        List<Book> result = new ArrayList<>();
+        for (Book book : books.values()) {
+            if (book.getTitle().toLowerCase().contains(keyword.toLowerCase()) ||
+                    book.getAuthor().toString().toLowerCase().contains(keyword.toLowerCase()) ||
+                    book.getGenre().toString().toLowerCase().contains(keyword.toLowerCase())) {
+                result.add(book);
+            }
+        }
+        return result;
+    }
+
+
+    @Override
+    public void lendBook(int bookId, String borrower) {
+        if (books.containsKey(bookId) && books.get(bookId).isAvailable()) {
+            books.get(bookId).setAvailable(false);
+            borrowingHistory.put(bookId, borrower);
+        }
+    }
+
+    @Override
+    public void returnBook(int bookId) {
+        if (books.containsKey(bookId) && !books.get(bookId).isAvailable()) {
+            books.get(bookId).setAvailable(true);
+            borrowingHistory.remove(bookId);
+        }
+    }
+
+    public Map<Integer, Book> getBooks() {
+        return books;
+    }
+
+    public Map<Integer, String> getBorrowingHistory() {
+        return borrowingHistory;
+    }
+}
+
+
+public class LibraryManagementApp {
+    private Library library;
+    private Scanner scanner;
+
+    public LibraryManagementApp() {
+        this.library = new Library();
+        this.scanner = new Scanner(System.in);
+    }
+
+
+    private void displayOptions() {
+        System.out.println("1. Add Book");
+        System.out.println("2. Edit Book");
+        System.out.println("3. Remove Book");
+        System.out.println("4. Search Books");
+        System.out.println("5. Lend Book");
+        System.out.println("6. Return Book");
+        System.out.println("7. Exit");
+    }
+
+
+    public void handleUserInput() {
+        int choice;
+        do {
+            displayOptions();
+            System.out.print("Enter your choice: ");
+            choice = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (choice) {
+                case 1:
+                    addBook();
+                    break;
+                case 2:
+                    editBook();
+                    break;
+                case 3:
+                    removeBook();
+                    break;
+                case 4:
+                    searchBooks();
+                    break;
+                case 5:
+                    lendBook();
+                    break;
+                case 6:
+                    returnBook();
+                    break;
+            }
+        } while (choice != 7);
+    }
+
+
+    private void addBook() {
+        System.out.print("Enter book title: ");
+        String title = scanner.nextLine();
+        System.out.print("Enter author name: ");
+        String authorName = scanner.nextLine();
+        System.out.print("Enter genre (FICTION, NON_FICTION, MYSTERY, SCIENCE_FICTION, FANTASY, ROMANCE, HORROR): ");
+        Genre genre = Genre.valueOf(scanner.next().toUpperCase());
+
+        Author author = new Author(authorName);
+        Book newBook = new Book(title, author, genre);
+
+        library.addBook(newBook);
+        System.out.println("Book added successfully!");
+    }
+
+
+    private void editBook() {
+        System.out.print("Enter book ID to edit: ");
+        int bookId = scanner.nextInt();
+
+        if (library.getBooks().containsKey(bookId)) {
+            Book currentBook = library.getBooks().get(bookId);
+
+            System.out.print("Enter new title (current: " + currentBook.getTitle() + "): ");
+            String newTitle = scanner.nextLine();
+            if (!newTitle.isEmpty()) {
+                currentBook = new Book(newTitle, currentBook.getAuthor(), currentBook.getGenre());
+            }
+
+            System.out.print("Enter new author (current: " + currentBook.getAuthor() + "): ");
+            String newAuthor = scanner.nextLine();
+            if (!newAuthor.isEmpty()) {
+                currentBook.getAuthor().toString().toLowerCase().contains(newAuthor.toLowerCase());
+            }
+
+            System.out.print("Enter new genre (current: " + currentBook.getGenre() + "): ");
+            String newGenre = scanner.nextLine();
+            if (!newGenre.isEmpty()) {
+                currentBook = new Book(currentBook.getTitle(), currentBook.getAuthor(), Genre.valueOf(newGenre.toUpperCase()));
+            }
+
+            library.editBook(bookId, currentBook);
+            System.out.println("Book edited successfully!");
+        } else {
+            System.out.println("Book not found!");
+        }
+    }
+
+
+    private void removeBook() {
+        System.out.print("Enter book ID to remove: ");
+        int bookId = scanner.nextInt();
+
+        if (library.getBooks().containsKey(bookId)) {
+            library.removeBook(bookId);
+            System.out.println("Book removed successfully!");
+        } else {
+            System.out.println("Book not found!");
+        }
+    }
+
+
+    private void searchBooks() {
+        System.out.print("Enter search keyword: ");
+        String keyword = scanner.nextLine();
+
+        List<Book> result = library.searchBooks(keyword);
+        if (!result.isEmpty()) {
+            System.out.println("Search Results:");
+            for (Book book : result) {
+                System.out.println(book);
+            }
+        } else {
+            System.out.println("No matching books found!");
+        }
+    }
+
+
+    private void lendBook() {
+        System.out.print("Enter book ID to lend: ");
+        int bookId = scanner.nextInt();
+        scanner.nextLine(); // consume newline
+        System.out.print("Enter borrower name: ");
+        String borrower = scanner.nextLine();
+
+        if (library.getBooks().containsKey(bookId)) {
+            library.lendBook(bookId, borrower);
+            System.out.println("Book lent successfully!");
+        } else {
+            System.out.println("Book not found!");
+        }
+    }
+
+
+    private void returnBook() {
+        System.out.print("Enter book ID to return: ");
+        int bookId = scanner.nextInt();
+
+        if (library.getBooks().containsKey(bookId)) {
+            library.returnBook(bookId);
+            System.out.println("Book returned successfully!");
+        } else {
+            System.out.println("Book not found!");
+        }
+    }
+
+
+    public static void main(String[] args) {
+        LibraryManagementApp libraryApp = new LibraryManagementApp();
+        libraryApp.handleUserInput();
+    }
+}
